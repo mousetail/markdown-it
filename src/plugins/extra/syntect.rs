@@ -63,10 +63,7 @@ impl CoreRule for SyntectRule {
     fn run(root: &mut Node, md: &MarkdownIt) {
         let ss = SyntaxSet::load_defaults_newlines();
         let ts = ThemeSet::load_defaults();
-        let mode = match md.ext.get::<SyntectSettings>().copied().unwrap_or_default().0 {
-            SyntectMode::InlineStyles {theme} => Some(&ts.themes[theme]),
-            SyntectMode::CssClasses => None
-        };
+        let mode = match md.ext.get::<SyntectSettings>().copied().unwrap_or_default().0;
 
         root.walk_mut(|node, _| {
             let mut content = None;
