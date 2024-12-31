@@ -1,7 +1,7 @@
 //! Syntax highlighting for code blocks
 use syntect::highlighting::ThemeSet;
-use syntect::html::{highlighted_html_for_string, ClassedHtmlGenerator};
 pub use syntect::html::ClassStyle;
+use syntect::html::{highlighted_html_for_string, ClassedHTMLGenerator};
 use syntect::parsing::SyntaxSet;
 use syntect::util::LinesWithEndings;
 
@@ -25,7 +25,7 @@ impl NodeValue for SyntectSnippet {
 #[derive(Debug, Clone, Copy)]
 enum SyntectMode {
     InlineStyles { theme: &'static str },
-    CssClasses { class_style: ClassStyle }
+    CssClasses { class_style: ClassStyle },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -34,7 +34,9 @@ impl MarkdownItExt for SyntectSettings {}
 
 impl Default for SyntectSettings {
     fn default() -> Self {
-        Self(SyntectMode::InlineStyles { theme: "InspiredGitHub" })
+        Self(SyntectMode::InlineStyles {
+            theme: "InspiredGitHub",
+        })
     }
 }
 
@@ -44,18 +46,16 @@ pub fn add(md: &mut MarkdownIt) {
 
 /// Use inline styles with the given theme
 pub fn set_theme(md: &mut MarkdownIt, theme: &'static str) {
-    md.ext.insert(SyntectSettings(
-        SyntectMode::InlineStyles { theme }
-    ));
+    md.ext
+        .insert(SyntectSettings(SyntectMode::InlineStyles { theme }));
 }
 
 /// Generate spans with css classes applied
-/// 
+///
 /// This is an alternative to using a theme. You are responsible for including a style sheet.
 pub fn use_css_classes(md: &mut MarkdownIt, class_style: ClassStyle) {
-    md.ext_insert(SyntectSettings(
-        SyntectMode::CssClasses { class_style }
-    ));
+    md.ext
+        .insert(SyntectSettings(SyntectMode::CssClasses { class_style }));
 }
 
 pub struct SyntectRule;
@@ -63,7 +63,12 @@ impl CoreRule for SyntectRule {
     fn run(root: &mut Node, md: &MarkdownIt) {
         let ss = SyntaxSet::load_defaults_newlines();
         let ts = ThemeSet::load_defaults();
-        let mode = match md.ext.get::<SyntectSettings>().copied().unwrap_or_default().0;
+        let mode = md
+            .ext
+            .get::<SyntectSettings>()
+            .copied()
+            .unwrap_or_default()
+            .0;
 
         root.walk_mut(|node, _| {
             let mut content = None;
@@ -84,11 +89,18 @@ impl CoreRule for SyntectRule {
                 let syntax = syntax.unwrap_or_else(|| ss.find_syntax_plain_text());
 
                 let html = match mode {
-                    SyntectMode::InlineStyles { theme } => highlighted_html_for_string(content, &ss, syntax, &ts.themes[theme]),
+                    SyntectMode::InlineStyles { theme } => {
+                        highlighted_html_for_string(content, &ss, syntax, &ts.themes[theme])
+                    }
                     SyntectMode::CssClasses { class_style } => {
-                        let mut html_generator = ClassedHTMLGenerator::new_with_class_style(syntax, &ss, class_style);
+                        let mut html_generator =
+                            ClassedHTMLGenerator::new_with_class_style(syntax, &ss, class_style);
                         for line in LinesWithEndings::from(content) {
-                            html_generator.parse_html_for_line_which_includes_newline(line);
+                            if let Err(_) =
+                                html_generator.parse_html_for_line_which_includes_newline(line)
+                            {
+                                return;
+                            };
                         }
                         Ok(html_generator.finalize())
                     }
